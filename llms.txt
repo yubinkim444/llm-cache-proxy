@@ -1,0 +1,32 @@
+# llm-cache-proxy
+
+> Local SQLite cache for OpenAI and Anthropic API calls. One env var, 60–80% cheaper dev loops. Works with every existing tool.
+
+## Install &amp; run
+```
+pip install llm-cache-proxy
+llm-cache-proxy
+# or: uvx llm-cache-proxy
+```
+Default port 9001. Cache at `~/.cache/llm-cache-proxy/cache.db`.
+
+## Point your tools at it (one env var per provider)
+```bash
+export OPENAI_BASE_URL=http://127.0.0.1:9001/openai/v1
+export ANTHROPIC_BASE_URL=http://127.0.0.1:9001/anthropic
+```
+
+Now Cursor, Claude Code, your scripts, your pytest suite, the OpenAI/Anthropic SDKs — all use the cache automatically. Responses include `X-LLM-Cache: HIT|MISS`.
+
+## Cache key
+`sha256(method + path + body + optional x-llm-cache-extra-key header)`.
+
+Headers are not part of the default key, so rotating an API key does NOT invalidate the cache.
+
+## Stats
+`GET /stats` returns `{hits, misses, entries, cached_response_bytes, by_model}`.
+
+## Caveats for an AI agent reading this
+- Only `2xx` responses are cached. Errors always pass through.
+- SSE streaming responses are captured and replayed verbatim on cache hit.
+- Don't expose this proxy to the public internet — it has no auth and your API key flows through it.
